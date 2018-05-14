@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".Main" >
+    <item android:id="@+id/selectImage"
+        android:title="SelectImage"
+        android:orderInCategory="100"
+        app:showAsAction="never" />
+    <item android:id="@+id/rotateImage"
+        android:title="RotateImage"
+        android:orderInCategory="100"
+        app:showAsAction="never" />
+    <item android:id="@+id/drawContour"
+        android:title="DrawContour"
+        android:orderInCategory="100"
+        app:showAsAction="never" />
+    <item android:id="@+id/passPerspective"
+        android:title="PassPerspective"
+        android:orderInCategory="100"
+        app:showAsAction="never" />
+    <item android:id="@+id/detectNumber"
+        android:title="DetectNumber"
+        android:orderInCategory="100"
+        app:showAsAction="never" />.
+</menu>
