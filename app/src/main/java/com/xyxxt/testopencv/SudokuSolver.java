@@ -35,7 +35,7 @@ import java.util.List;
  */
 
 public class SudokuSolver {
-    private static final String DATA_PATH = "Data";
+    private static final String DATA_PATH = "tessdata";
 
     private Mat imgOriginal;
     private final float SUDOKU_HEIGHT = 500;
@@ -43,6 +43,7 @@ public class SudokuSolver {
     private MatOfPoint bigContour;
     private Context context;
     private TessBaseAPI tessBaseAPI;
+
 
     public SudokuSolver(Mat imgOriginal, Context context){
         this.imgOriginal = imgOriginal;
@@ -77,7 +78,6 @@ public class SudokuSolver {
 
     // Detect contour
     public void imageProcessing(){
-
         // Find contour with max area and squad form
         List<MatOfPoint> contours = new ArrayList<>();
         Imgproc.findContours(
@@ -113,7 +113,7 @@ public class SudokuSolver {
 
     public Mat getImageThreshold(){
         Mat imgTransform = new Mat(imgOriginal.rows(),imgOriginal.cols(), CvType.CV_8UC1);
-        Mat element = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(2,2), new Point(1,1));
+        Mat element = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(5, 5));
         //convert to grayscale
         Imgproc.cvtColor(imgOriginal, imgTransform, Imgproc.COLOR_BGR2GRAY);
 
@@ -122,7 +122,7 @@ public class SudokuSolver {
         Imgproc.erode(imgTransform, imgTransform, element);
 
         Imgproc.GaussianBlur(imgTransform, imgTransform, new Size(5, 5), 0);
-        Imgproc.adaptiveThreshold(imgTransform, imgTransform, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY_INV, 11, 2);
+        Imgproc.adaptiveThreshold(imgTransform, imgTransform, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY, 11, 2);
         return imgTransform;
     }
 
@@ -161,7 +161,7 @@ public class SudokuSolver {
             Imgproc.warpPerspective(imgResult, imgResult, perspectiveTransform, new Size(SUDOKU_WIDTH, SUDOKU_HEIGHT));
         }
 
-        Core.flip(imgResult, imgResult, 1);
+        //Core.flip(imgResult, imgResult, 1);
         return imgResult;
     }
 
@@ -186,12 +186,9 @@ public class SudokuSolver {
             }
             String fileList[] = context.getAssets().list("");
             for(String fileName : fileList){
-                if(!(new File(Environment.getExternalStorageDirectory() + "/" + DATA_PATH, fileName)).exists()){
+                if(!(new File(context.getFilesDir() + "/" + DATA_PATH, fileName)).exists()){
                     InputStream is = context.getAssets().open(fileName);
-
-
-                    /////////////////CREATE FILE
-                    OutputStream os = new FileOutputStream(Environment.getExternalStorageDirectory() + "/" + DATA_PATH + "/" + fileName);
+                    OutputStream os = new FileOutputStream(context.getFilesDir() + "/" + DATA_PATH + "/" +fileName);
                     byte [] buff = new byte[1024];
                     int len;
                     while((len = is.read(buff))>0){
@@ -206,11 +203,11 @@ public class SudokuSolver {
         }
     }
 
-    public String getTextWithTesseract(Mat result) throws IOException {
+    public String getTextWithTesseract(Mat result){
         tessBaseAPI = new TessBaseAPI();
         Bitmap bm = Bitmap.createBitmap(result.cols(), result.rows(),Bitmap.Config.ARGB_8888);
         Utils.matToBitmap(result, bm);
-        tessBaseAPI.init(DATA_PATH,"eng");
+        tessBaseAPI.init(context.getFilesDir() + "/","eng");
         tessBaseAPI.setImage(bm);
         String retStr = tessBaseAPI.getUTF8Text();
         tessBaseAPI.end();

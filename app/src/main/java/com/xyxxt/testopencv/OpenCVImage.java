@@ -212,7 +212,8 @@ public class OpenCVImage extends AppCompatActivity {
 
     private void detectNumberOfImage(){
         try{
-            txtNumber.setText(String.valueOf(Integer.valueOf(sudokuSolver.getTextWithTesseract((sudokuSplits[iteradorI][iteradorJ])))));
+            txtNumber.setText(String.valueOf(sudokuSolver.getTextWithTesseract((sudokuSplits[iteradorI][iteradorJ]))));
+            //txtNumber.setText(String.valueOf(sudokuSolver.getTextWithTesseract(sudokuSolver.getImageThreshold())));
         }catch (Exception e){
             e.printStackTrace();
             txtNumber.setText("?");

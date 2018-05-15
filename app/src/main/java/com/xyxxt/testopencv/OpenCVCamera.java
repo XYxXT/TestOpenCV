@@ -8,6 +8,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.SurfaceView;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase;
@@ -27,6 +28,7 @@ public class OpenCVCamera extends AppCompatActivity implements CameraBridgeViewB
     JavaCameraView cameraView;
     ImageView imageView;
     Mat rgbA, rgbT, rgbF;
+    TextView textView;
     BaseLoaderCallback baseLoaderCallback = new BaseLoaderCallback(this) {
         @Override
         public void onManagerConnected(int status) {
@@ -47,10 +49,12 @@ public class OpenCVCamera extends AppCompatActivity implements CameraBridgeViewB
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_open_cvcamera);
 
+        textView = findViewById(R.id.txt);
         cameraView = findViewById(R.id.View1Camera);
         imageView = findViewById(R.id.imageView);
         cameraView.setVisibility(SurfaceView.VISIBLE);
         cameraView.setCvCameraViewListener(this);
+
     }
 
 
@@ -134,8 +138,14 @@ public class OpenCVCamera extends AppCompatActivity implements CameraBridgeViewB
             case R.id.actionDetectSudoku:
                 SudokuSolver sudokuSolver = new SudokuSolver(rgbA, getApplicationContext());
                 sudokuSolver.imageProcessing();
+                final String s = String.valueOf(sudokuSolver.getTextWithTesseract(rgbA));
+                runOnUiThread(new Runnable() {
+                    public void run(){
+                        textView.setText(s);
+                    }
+                });
                 //sudokuSolver.sudokuDetected();
-                showImageFromCamera(sudokuSolver.passToPerspective());
+                //showImageFromCamera(sudokuSolver.passToPerspective());
                 break;
             default:
                 runOnUiThread(new Runnable() {
