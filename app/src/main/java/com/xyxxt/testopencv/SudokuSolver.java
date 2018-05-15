@@ -36,6 +36,7 @@ import java.util.List;
 
 public class SudokuSolver {
     private static final String DATA_PATH = "tessdata";
+    ////Dataset mnist
 
     private Mat imgOriginal;
     private final float SUDOKU_HEIGHT = 500;
@@ -118,11 +119,21 @@ public class SudokuSolver {
         Imgproc.cvtColor(imgOriginal, imgTransform, Imgproc.COLOR_BGR2GRAY);
 
         //I have done just noise removal and thresholding. And it is working. So I haven't done anything extra.
-        Imgproc.dilate(imgTransform, imgTransform, element);
-        Imgproc.erode(imgTransform, imgTransform, element);
+        //Imgproc.dilate(imgTransform, imgTransform, element);
+        //Imgproc.erode(imgTransform, imgTransform, element);
 
-        Imgproc.GaussianBlur(imgTransform, imgTransform, new Size(5, 5), 0);
-        Imgproc.adaptiveThreshold(imgTransform, imgTransform, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY, 11, 2);
+
+        Imgproc.morphologyEx(imgTransform, imgTransform, Imgproc.MORPH_CLOSE, element);
+        Imgproc.morphologyEx(imgTransform, imgTransform, Imgproc.MORPH_OPEN, element);
+
+        //Imgproc.morphologyEx(imgTransform, imgTransform, Imgproc.MORPH_CLOSE, Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(7, 7)));
+
+        //Imgproc.erode(imgTransform, imgTransform, element);
+
+
+        //Imgproc.GaussianBlur(imgTransform, imgTransform, new Size(5, 5), 0);
+        //Imgproc.medianBlur(imgTransform, imgTransform, 3);
+        Imgproc.adaptiveThreshold(imgTransform, imgTransform, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY_INV, 11, 2);
         return imgTransform;
     }
 
@@ -161,17 +172,19 @@ public class SudokuSolver {
             Imgproc.warpPerspective(imgResult, imgResult, perspectiveTransform, new Size(SUDOKU_WIDTH, SUDOKU_HEIGHT));
         }
 
-        //Core.flip(imgResult, imgResult, 1);
+        //Imgproc.morphologyEx(imgResult, imgResult, Imgproc.MORPH_OPEN, Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(2, 2)));
+
+        Core.flip(imgResult, imgResult, 1);
         return imgResult;
     }
 
-    public Mat[][] splitSudoku(){
+    public Mat[][] splitSudoku(Mat origin){
         Mat squads[][] = new Mat[9][9];
         int squadHeight = (int) (SUDOKU_HEIGHT / 9);
         int squadWidth = (int) (SUDOKU_WIDTH / 9);
         for(int i = 0; i < 9; i++){
             for(int j = 0; j < 9; j ++){
-                squads[i][j] = new  Mat(passToPerspective(),  new Rect(i * squadWidth,  j *squadHeight ,squadWidth, squadHeight));
+                squads[i][j] = new  Mat(origin,  new Rect(i * squadWidth + 6,  j *squadHeight + 6 ,squadWidth - 8, squadHeight - 8));
             }
         }
         return squads;
