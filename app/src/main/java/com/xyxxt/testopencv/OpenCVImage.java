@@ -3,6 +3,7 @@ package com.xyxxt.testopencv;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -22,10 +23,12 @@ import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfPoint;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 
 public class OpenCVImage extends AppCompatActivity {
 
@@ -35,6 +38,7 @@ public class OpenCVImage extends AppCompatActivity {
     private ImageView imageSrc, imageDst;
     private TextView txtNumber;
     private Button btnPrevious, btnNext;
+    private double angle = 0;
 
     private boolean isImageSelect = false;
     private SudokuSolver sudokuSolver;
@@ -97,7 +101,9 @@ public class OpenCVImage extends AppCompatActivity {
                 return true;
             case R.id.rotateImage:
                 if(isImageSelect){
-                    showImageFromCamera(sudokuSolver.rotateImage(sudokuSolver.getImgOriginal(), 90.0));
+                    angle = angle + 90;
+                    if(angle >= 360) angle = 0;
+                    showImageFromCamera(sudokuSolver.rotateImage(sudokuSolver.getImgOriginal(), angle));
                 }
                 return true;
             case R.id.drawContour:
@@ -107,13 +113,18 @@ public class OpenCVImage extends AppCompatActivity {
                 return true;
             case R.id.passPerspective:
                 if(isImageSelect){
-                    showImageFromCamera(sudokuSolver.passToPerspective());
+                    showImageFromCamera(sudokuSolver.rotateImage(sudokuSolver.passToPerspective(sudokuSolver.getImgOriginal(), sudokuSolver.bigContour), angle));
                 }
                 return true;
             case R.id.detectNumber:
                 if(isImageSelect){
                     prepareLayoutForDetectNumber();
                     detectNumber();
+                }
+                return true;
+            case R.id.detectFeature:
+                if(isImageSelect){
+                    detectFeature();
                 }
                 return true;
             default:
@@ -178,7 +189,7 @@ public class OpenCVImage extends AppCompatActivity {
     }
 
     private void detectNumber(){
-        sudokuSplits = sudokuSolver.splitSudoku();
+        sudokuSplits = sudokuSolver.splitSudoku(sudokuSolver.rotateImage(sudokuSolver.passToPerspective(sudokuSolver.getImgOriginal(), sudokuSolver.bigContour), angle));
         iteradorI = 0; iteradorJ = 0;
         showImageFromCamera(sudokuSplits[iteradorI][iteradorJ]);
     }
@@ -212,11 +223,42 @@ public class OpenCVImage extends AppCompatActivity {
 
     private void detectNumberOfImage(){
         try{
-            txtNumber.setText(String.valueOf(sudokuSolver.getTextWithTesseract((sudokuSplits[iteradorI][iteradorJ]))));
+            txtNumber.setText(String.valueOf(sudokuSolver.getTextWithTesseract(sudokuSolver.rotateImage((sudokuSplits[iteradorI][iteradorJ]), angle))));
             //txtNumber.setText(String.valueOf(sudokuSolver.getTextWithTesseract(sudokuSolver.getImageThreshold())));
         }catch (Exception e){
             e.printStackTrace();
             txtNumber.setText("?");
+        }
+    }
+
+    private void detectFeature() {
+        InputStream ims;
+        Bitmap bitmap;
+        try {
+            ims = getAssets().open("feature.png");
+            bitmap = BitmapFactory.decodeStream(ims);
+            Mat im = new Mat();
+            Utils.bitmapToMat(bitmap.copy(Bitmap.Config.ARGB_8888, true), im);
+
+            //showImageFromCamera(sudokuSolver.getImageThreshold(sudokuSolver.getImgOriginal()));
+
+          //  showImageFromCamera(sudokuSolver.drawContours(sudokuSolver.getImgOriginal(), sudokuSolver.findContour(sudokuSolver.getImgOriginal())));
+           // showImageFromCamera(sudokuSolver.rotateImage(sudokuSolver.passToPerspective(sudokuSolver.getImgOriginal(), sudokuSolver.findContour(sudokuSolver.getImgOriginal()).get(0)), angle));
+
+            //FindMatching findMatching = new FindMatching(im);
+
+
+            List<MatOfPoint> contours = sudokuSolver.findContour(sudokuSolver.getImgOriginal());
+
+            List<MatOfPoint> squads = sudokuSolver.filterContoursSquad(contours);
+            List<MatOfPoint> circles = sudokuSolver.filterContoursCircle(contours);
+
+             showImageFromCamera(sudokuSolver.drawContours(sudokuSolver.getImgOriginal(), circles));
+
+            //showImageFromCamera(sudokuSolver.drawCircle(sudokuSolver.rotateImage(sudokuSolver.passToPerspective(sudokuSolver.getImgOriginal(), squads.get(0)), angle)));
+
+        } catch (IOException e) {
+            // handle exception
         }
     }
 

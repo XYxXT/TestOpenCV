@@ -2,8 +2,6 @@ package com.xyxxt.testopencv;
 
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.os.Environment;
-import android.util.SparseArray;
 
 import com.googlecode.tesseract.android.TessBaseAPI;
 
@@ -26,8 +24,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -41,7 +39,7 @@ public class SudokuSolver {
     private Mat imgOriginal;
     private final float SUDOKU_HEIGHT = 500;
     private final float SUDOKU_WIDTH = 500;
-    private MatOfPoint bigContour;
+    public MatOfPoint bigContour;
     private Context context;
     private TessBaseAPI tessBaseAPI;
 
@@ -80,14 +78,7 @@ public class SudokuSolver {
     // Detect contour
     public void imageProcessing(){
         // Find contour with max area and squad form
-        List<MatOfPoint> contours = new ArrayList<>();
-        Imgproc.findContours(
-                getImageThreshold(),
-                contours,
-                new Mat(),
-                Imgproc.RETR_TREE,
-                Imgproc.CHAIN_APPROX_SIMPLE
-        );
+        List<MatOfPoint> contours = findContour(imgOriginal);
 
         if (contours.size() > 0) {
             MatOfPoint maxContour = contours.get(0);
@@ -112,11 +103,68 @@ public class SudokuSolver {
         }
     }
 
-    public Mat getImageThreshold(){
-        Mat imgTransform = new Mat(imgOriginal.rows(),imgOriginal.cols(), CvType.CV_8UC1);
+    public List<MatOfPoint> findContour(Mat image){
+        List<MatOfPoint> contours = new ArrayList<>();
+        Imgproc.findContours(
+                getImageThreshold(image),
+                contours,
+                new Mat(),
+                Imgproc.RETR_TREE,
+                Imgproc.CHAIN_APPROX_SIMPLE
+        );
+
+
+        return contours;
+    }
+
+    private MatOfPoint aproxPolygon(MatOfPoint poly) {
+
+        MatOfPoint2f dst = new MatOfPoint2f();
+        MatOfPoint2f src = new MatOfPoint2f();
+        MatOfPoint result = new MatOfPoint();
+        poly.convertTo(src, CvType.CV_32FC2);
+
+        double arcLength = Imgproc.arcLength(src, true);
+        Imgproc.approxPolyDP(src, dst, 0.01 * arcLength, true);
+        dst.convertTo(result, CvType.CV_32S);
+        return result;
+    }
+
+    public List<MatOfPoint> filterContoursSquad(List<MatOfPoint> contours){
+        List<MatOfPoint> newList = new ArrayList<>();
+        contours.sort(new Comparator<MatOfPoint>() {
+            @Override
+            public int compare(MatOfPoint t0, MatOfPoint t1) {
+                if(Imgproc.contourArea(t0) > Imgproc.contourArea(t1))
+                    return 1;
+                else return 0;
+            }
+        });
+
+        for(MatOfPoint contour : contours){
+            MatOfPoint tmp = aproxPolygon(contour);
+            if(tmp .toArray().length == 4 && Imgproc.contourArea(tmp) > 500)
+                newList.add(tmp);
+        }
+
+        return newList;
+    }
+
+    public List<MatOfPoint> filterContoursCircle(List<MatOfPoint> contours){
+        List<MatOfPoint> newList = new ArrayList<>();
+        for(MatOfPoint contour : contours){
+            MatOfPoint tmp = aproxPolygon(contour);
+            if(tmp .toArray().length > 8 && tmp .toArray().length < 24 && Imgproc.contourArea(tmp) > 1000)
+                newList.add(tmp);
+        }
+        return newList;
+    }
+
+    public Mat getImageThreshold(Mat img){
+        Mat imgTransform = new Mat(img.rows(),img.cols(), CvType.CV_8UC1);
         Mat element = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(5, 5));
         //convert to grayscale
-        Imgproc.cvtColor(imgOriginal, imgTransform, Imgproc.COLOR_BGR2GRAY);
+        Imgproc.cvtColor(img, imgTransform, Imgproc.COLOR_BGR2GRAY);
 
         //I have done just noise removal and thresholding. And it is working. So I haven't done anything extra.
         //Imgproc.dilate(imgTransform, imgTransform, element);
@@ -157,12 +205,20 @@ public class SudokuSolver {
         return imgResult;
     }
 
+    public Mat drawContours(Mat image, List<MatOfPoint> coutours){
+        Mat imgResult = image.clone();
+        for(MatOfPoint contour : coutours){
+            Imgproc.drawContours(imgResult, Collections.singletonList(contour), -1, new Scalar(255, 0, 0), 4);
+        }
+        return imgResult;
+    }
+
     // Pass to perspective
-    public Mat passToPerspective(){
-        Mat imgResult = getImageThreshold(); //imgOriginal.clone();
-        if(bigContour != null){
+    public Mat passToPerspective(Mat image, MatOfPoint contour){
+        Mat imgResult = getImageThreshold(image); //imgOriginal.clone();
+        if(contour != null){
             List<Point> pointList = new ArrayList<>();
-            Collections.addAll(pointList, bigContour.toArray());
+            Collections.addAll(pointList, contour.toArray());
             Mat src_mat  = Converters.vector_Point2f_to_Mat(pointList);
 
             Mat dst_mat = new Mat(4,1,CvType.CV_32FC2);
@@ -226,4 +282,26 @@ public class SudokuSolver {
         tessBaseAPI.end();
         return retStr;
     }
+
+    public Mat drawCircle(Mat im){
+        Mat circles = new Mat();
+        Imgproc.HoughCircles(im, circles, Imgproc.HOUGH_GRADIENT, 2,
+                (double)im.rows()/4, // change this value to detect circles with different distances to each other
+                200, 100, 30, 100); // change the last two parameters
+        // (min_radius & max_radius) to detect larger circles
+        for (int x = 0; x < circles.cols(); x++) {
+            double[] c = circles.get(0, x);
+            Point center = new Point(Math.round(c[0]), Math.round(c[1]));
+            // circle center
+            Imgproc.circle(im, center, 1, new Scalar(0,100,100), 3, 8, 0 );
+            // circle outline
+            int radius = (int) Math.round(c[2]);
+            Imgproc.circle(im, center, radius, new Scalar(255,0,255), 3, 8, 0 );
+        }
+
+        return im;
+    }
+
+
+
 }

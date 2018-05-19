@@ -29,6 +29,7 @@ public class OpenCVCamera extends AppCompatActivity implements CameraBridgeViewB
     ImageView imageView;
     Mat rgbA, rgbT, rgbF;
     TextView textView;
+    double angle = 0;
     BaseLoaderCallback baseLoaderCallback = new BaseLoaderCallback(this) {
         @Override
         public void onManagerConnected(int status) {
@@ -138,12 +139,13 @@ public class OpenCVCamera extends AppCompatActivity implements CameraBridgeViewB
             case R.id.actionDetectSudoku:
                 SudokuSolver sudokuSolver = new SudokuSolver(rgbA, getApplicationContext());
                 sudokuSolver.imageProcessing();
-                final String s = String.valueOf(sudokuSolver.getTextWithTesseract(rgbA));
-                runOnUiThread(new Runnable() {
+                //final String s = String.valueOf(sudokuSolver.getTextWithTesseract(rgbA));
+                /*runOnUiThread(new Runnable() {
                     public void run(){
                         textView.setText(s);
                     }
-                });
+                });*/
+
                 //sudokuSolver.sudokuDetected();
                 //showImageFromCamera(sudokuSolver.passToPerspective());
                 break;
