@@ -19,7 +19,10 @@ import org.opencv.android.Utils;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfKeyPoint;
+import org.opencv.core.Scalar;
 import org.opencv.core.Size;
+import org.opencv.features2d.FeatureDetector;
 import org.opencv.imgproc.Imgproc;
 
 public class OpenCVCamera extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
@@ -64,7 +67,7 @@ public class OpenCVCamera extends AppCompatActivity implements CameraBridgeViewB
         super.onResume();
         if (!OpenCVLoader.initDebug()) {
             Log.e(this.getClass().getSimpleName(), "  OpenCVLoader.initDebug(), not working.");
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, this, baseLoaderCallback);
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_1_0, this, baseLoaderCallback);
 
 
         } else {
@@ -138,16 +141,16 @@ public class OpenCVCamera extends AppCompatActivity implements CameraBridgeViewB
                 break;
             case R.id.actionDetectSudoku:
                 SudokuSolver sudokuSolver = new SudokuSolver(rgbA, getApplicationContext());
-                sudokuSolver.imageProcessing();
-                //final String s = String.valueOf(sudokuSolver.getTextWithTesseract(rgbA));
-                /*runOnUiThread(new Runnable() {
-                    public void run(){
-                        textView.setText(s);
-                    }
-                });*/
+                Mat img = sudokuSolver.getImageThreshold(sudokuSolver.getImgOriginal());
+                FeatureDetector featureDetector = FeatureDetector.create(FeatureDetector.SIMPLEBLOB);
+                MatOfKeyPoint keyPoints = new MatOfKeyPoint();
+                featureDetector.detect(img, keyPoints);
 
-                //sudokuSolver.sudokuDetected();
-                //showImageFromCamera(sudokuSolver.passToPerspective());
+                Mat drawImage = sudokuSolver.getImgOriginal().clone();
+                for (int i = 0; i < keyPoints.toArray().length; ++i)
+                    Imgproc.circle(drawImage, keyPoints.toArray()[i].pt, 10, new Scalar(255, 0, 255), -1);
+
+                showImageFromCamera(drawImage);
                 break;
             default:
                 runOnUiThread(new Runnable() {

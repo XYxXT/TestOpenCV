@@ -106,7 +106,7 @@ public class SudokuSolver {
     public List<MatOfPoint> findContour(Mat image){
         List<MatOfPoint> contours = new ArrayList<>();
         Imgproc.findContours(
-                getImageThreshold(image),
+                image,
                 contours,
                 new Mat(),
                 Imgproc.RETR_TREE,
@@ -162,25 +162,14 @@ public class SudokuSolver {
 
     public Mat getImageThreshold(Mat img){
         Mat imgTransform = new Mat(img.rows(),img.cols(), CvType.CV_8UC1);
-        Mat element = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(5, 5));
+        Mat element = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(3, 3));
         //convert to grayscale
         Imgproc.cvtColor(img, imgTransform, Imgproc.COLOR_BGR2GRAY);
 
-        //I have done just noise removal and thresholding. And it is working. So I haven't done anything extra.
-        //Imgproc.dilate(imgTransform, imgTransform, element);
-        //Imgproc.erode(imgTransform, imgTransform, element);
+        //Imgproc.morphologyEx(imgTransform, imgTransform, Imgproc.MORPH_CLOSE, element);
+        //Imgproc.morphologyEx(imgTransform, imgTransform, Imgproc.MORPH_OPEN, element);
 
-
-        Imgproc.morphologyEx(imgTransform, imgTransform, Imgproc.MORPH_CLOSE, element);
-        Imgproc.morphologyEx(imgTransform, imgTransform, Imgproc.MORPH_OPEN, element);
-
-        //Imgproc.morphologyEx(imgTransform, imgTransform, Imgproc.MORPH_CLOSE, Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(7, 7)));
-
-        //Imgproc.erode(imgTransform, imgTransform, element);
-
-
-        //Imgproc.GaussianBlur(imgTransform, imgTransform, new Size(5, 5), 0);
-        //Imgproc.medianBlur(imgTransform, imgTransform, 3);
+        Imgproc.GaussianBlur(imgTransform, imgTransform, new Size(5, 5), 0);
         Imgproc.adaptiveThreshold(imgTransform, imgTransform, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY_INV, 11, 2);
         return imgTransform;
     }
@@ -214,18 +203,18 @@ public class SudokuSolver {
     }
 
     // Pass to perspective
-    public Mat passToPerspective(Mat image, MatOfPoint contour){
-        Mat imgResult = getImageThreshold(image); //imgOriginal.clone();
+    public Mat passToPerspective(Mat image, MatOfPoint contour, int width, int height){
+        Mat imgResult = image.clone(); //imgOriginal.clone();
         if(contour != null){
             List<Point> pointList = new ArrayList<>();
             Collections.addAll(pointList, contour.toArray());
             Mat src_mat  = Converters.vector_Point2f_to_Mat(pointList);
 
             Mat dst_mat = new Mat(4,1,CvType.CV_32FC2);
-            dst_mat.put(0,0,0,0, SUDOKU_WIDTH, 0, SUDOKU_WIDTH, SUDOKU_HEIGHT, 0,SUDOKU_HEIGHT);
+            dst_mat.put(0,0,0,0, width, 0, width, height, 0,height);
 
             Mat perspectiveTransform = Imgproc.getPerspectiveTransform(src_mat, dst_mat);
-            Imgproc.warpPerspective(imgResult, imgResult, perspectiveTransform, new Size(SUDOKU_WIDTH, SUDOKU_HEIGHT));
+            Imgproc.warpPerspective(imgResult, imgResult, perspectiveTransform, new Size(width, height));
         }
 
         //Imgproc.morphologyEx(imgResult, imgResult, Imgproc.MORPH_OPEN, Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(2, 2)));

@@ -3,10 +3,10 @@ package com.xyxxt.testopencv;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.drawable.Drawable;
+import android.hardware.camera2.CameraDevice;
 import android.net.Uri;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -23,10 +23,13 @@ import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.MatOfPoint;
+import org.opencv.core.Scalar;
+import org.opencv.features2d.FeatureDetector;
+import org.opencv.imgproc.Imgproc;
 
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 
@@ -78,7 +81,7 @@ public class OpenCVImage extends AppCompatActivity {
         super.onResume();
         if (!OpenCVLoader.initDebug()) {
             Log.e(this.getClass().getSimpleName(), "  OpenCVLoader.initDebug(), not working.");
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, this, baseLoaderCallback);
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_1_0, this, baseLoaderCallback);
         } else {
             Log.d(this.getClass().getSimpleName(), "  OpenCVLoader.initDebug(), working.");
             baseLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
@@ -113,7 +116,7 @@ public class OpenCVImage extends AppCompatActivity {
                 return true;
             case R.id.passPerspective:
                 if(isImageSelect){
-                    showImageFromCamera(sudokuSolver.rotateImage(sudokuSolver.passToPerspective(sudokuSolver.getImgOriginal(), sudokuSolver.bigContour), angle));
+                    showImageFromCamera(sudokuSolver.rotateImage(sudokuSolver.passToPerspective(sudokuSolver.getImgOriginal(), sudokuSolver.bigContour, 1650, 750), angle));
                 }
                 return true;
             case R.id.detectNumber:
@@ -122,9 +125,9 @@ public class OpenCVImage extends AppCompatActivity {
                     detectNumber();
                 }
                 return true;
-            case R.id.detectFeature:
+            case R.id.detectBorder:
                 if(isImageSelect){
-                    detectFeature();
+                    detectBorder();
                 }
                 return true;
             default:
@@ -180,7 +183,7 @@ public class OpenCVImage extends AppCompatActivity {
         rgbA = new Mat();
         Utils.bitmapToMat(selectedImage.copy(Bitmap.Config.ARGB_8888, true), rgbA);
         sudokuSolver = new SudokuSolver(rgbA, getApplicationContext());
-        sudokuSolver.imageProcessing();
+        //sudokuSolver.imageProcessing();
     }
 
     private void prepareLayoutForDetectNumber(){
@@ -189,7 +192,7 @@ public class OpenCVImage extends AppCompatActivity {
     }
 
     private void detectNumber(){
-        sudokuSplits = sudokuSolver.splitSudoku(sudokuSolver.rotateImage(sudokuSolver.passToPerspective(sudokuSolver.getImgOriginal(), sudokuSolver.bigContour), angle));
+        sudokuSplits = sudokuSolver.splitSudoku(sudokuSolver.rotateImage(sudokuSolver.passToPerspective(sudokuSolver.getImgOriginal(), sudokuSolver.bigContour, 1650, 750), angle));
         iteradorI = 0; iteradorJ = 0;
         showImageFromCamera(sudokuSplits[iteradorI][iteradorJ]);
     }
@@ -231,35 +234,84 @@ public class OpenCVImage extends AppCompatActivity {
         }
     }
 
-    private void detectFeature() {
+    private void detectBorder() {
+
+        Mat img = sudokuSolver.getImageThreshold(sudokuSolver.getImgOriginal());
+        FeatureDetector featureDetector = FeatureDetector.create(FeatureDetector.SIMPLEBLOB);
+
+
+
+        MatOfKeyPoint keyPoints = new MatOfKeyPoint();
+        featureDetector.detect(img, keyPoints);
+        Mat drawImage = sudokuSolver.getImgOriginal().clone();
+        for (int i = 0; i < keyPoints.toArray().length; ++i)
+            Imgproc.circle(drawImage, keyPoints.toArray()[i].pt, 10, new Scalar(255, 0, 255), -1);
+
+        showImageFromCamera(drawImage);
+
+        /*
+        Mat img = sudokuSolver.getImageThreshold(sudokuSolver.getImgOriginal());
+
+        List<MatOfPoint> generalContours = sudokuSolver.findContour(img);
+        List<MatOfPoint> squads = sudokuSolver.filterContoursSquad(generalContours);
+        MatOfPoint borderContour= null;
+        List<MatOfPoint> circles;
+        Mat borderImage;
+        //showImageFromCamera(tmpImage);
+        for(MatOfPoint contour : squads){
+            borderImage = sudokuSolver.passToPerspective(img, contour, 500, 500);
+            circles = sudokuSolver.filterContoursCircle(sudokuSolver.findContour(borderImage));
+            if(circles.size() >= 3) borderContour = contour;
+        }
+
+        borderImage = sudokuSolver.passToPerspective(sudokuSolver.getImgOriginal(), borderContour, 500, 500);
+
+
+        Mat image = sudokuSolver.getImageThreshold(borderImage);
+        List<MatOfPoint> tt = sudokuSolver.filterContoursCircle(sudokuSolver.findContour(image));
+
+        //borderImage = getCorrectImageRotate(borderImage);
+
+        showImageFromCamera(sudokuSolver.drawContours(borderImage, tt));
+        */
+
+/*
         InputStream ims;
         Bitmap bitmap;
         try {
-            ims = getAssets().open("feature.png");
+            ims = getAssets().open("fea.png");
             bitmap = BitmapFactory.decodeStream(ims);
             Mat im = new Mat();
             Utils.bitmapToMat(bitmap.copy(Bitmap.Config.ARGB_8888, true), im);
+            FindMatching findMatching = new FindMatching(im);
 
-            //showImageFromCamera(sudokuSolver.getImageThreshold(sudokuSolver.getImgOriginal()));
-
-          //  showImageFromCamera(sudokuSolver.drawContours(sudokuSolver.getImgOriginal(), sudokuSolver.findContour(sudokuSolver.getImgOriginal())));
-           // showImageFromCamera(sudokuSolver.rotateImage(sudokuSolver.passToPerspective(sudokuSolver.getImgOriginal(), sudokuSolver.findContour(sudokuSolver.getImgOriginal()).get(0)), angle));
-
-            //FindMatching findMatching = new FindMatching(im);
-
-
-            List<MatOfPoint> contours = sudokuSolver.findContour(sudokuSolver.getImgOriginal());
-
-            List<MatOfPoint> squads = sudokuSolver.filterContoursSquad(contours);
-            List<MatOfPoint> circles = sudokuSolver.filterContoursCircle(contours);
-
-             showImageFromCamera(sudokuSolver.drawContours(sudokuSolver.getImgOriginal(), circles));
-
-            //showImageFromCamera(sudokuSolver.drawCircle(sudokuSolver.rotateImage(sudokuSolver.passToPerspective(sudokuSolver.getImgOriginal(), squads.get(0)), angle)));
-
+            showImageFromCamera(findMatching.detectFeature(sudokuSolver.getImgOriginal()));
         } catch (IOException e) {
             // handle exception
         }
+*/
+    }
+
+    public Mat getCorrectImageRotate(Mat original){
+        Mat image = sudokuSolver.getImageThreshold(original);
+        int angle;
+        for(angle = 0; angle <= 360; angle = angle + 90){
+            image = sudokuSolver.rotateImage(image, (double) angle);
+            List<MatOfPoint> circles = sudokuSolver.filterContoursCircle(sudokuSolver.findContour(image));
+            boolean left = false, top = false;
+            for(MatOfPoint circle : circles){
+                if(circles.get(0).toArray()[0].x - circle.toArray()[0].x < 500)
+                    left = true;
+                if(circles.get(0).toArray()[0].y - circle.toArray()[0].y < 500)
+                    top = true;
+            }
+            if(left && top){
+                return sudokuSolver.rotateImage(original, (double) angle);
+            }
+        }
+        CameraDevice s;
+
+        return sudokuSolver.rotateImage(original, (double) angle);
     }
 
 }
