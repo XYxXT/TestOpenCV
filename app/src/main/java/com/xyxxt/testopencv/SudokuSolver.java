@@ -174,6 +174,21 @@ public class SudokuSolver {
         return imgTransform;
     }
 
+    public Mat getImageThreshold_2(Mat img){
+        Mat imgTransform = new Mat(img.rows(),img.cols(), CvType.CV_8UC1);
+        Imgproc.resize(img, imgTransform, new Size(200,200));
+        //convert to grayscale
+        Imgproc.cvtColor(img, imgTransform, Imgproc.COLOR_BGR2GRAY);
+        Imgproc.adaptiveThreshold(imgTransform, imgTransform, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY_INV, 11, 2);
+
+        Imgproc.morphologyEx(imgTransform, imgTransform, Imgproc.MORPH_OPEN, Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(1, 1)));
+        Imgproc.morphologyEx(imgTransform, imgTransform, Imgproc.MORPH_CLOSE, Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(3, 3)));
+
+        Imgproc.GaussianBlur(imgTransform, imgTransform, new Size(5, 5), 0);
+
+        return imgTransform;
+    }
+
     public Mat rotateImage(Mat img, Double angle){
         Point src_center = new Point(img.cols()/2.0F, img.rows()/2.0F);
         Mat rot_mat = Imgproc.getRotationMatrix2D(src_center, - angle, 1);
@@ -229,7 +244,7 @@ public class SudokuSolver {
         int squadWidth = (int) (SUDOKU_WIDTH / 9);
         for(int i = 0; i < 9; i++){
             for(int j = 0; j < 9; j ++){
-                squads[i][j] = new  Mat(origin,  new Rect(i * squadWidth + 6,  j *squadHeight + 6 ,squadWidth - 8, squadHeight - 8));
+                squads[i][j] = new  Mat(origin,  new Rect(i * squadWidth + 8,  j *squadHeight + 8 ,squadWidth - 14, squadHeight - 14));
             }
         }
         return squads;
@@ -266,6 +281,7 @@ public class SudokuSolver {
         Bitmap bm = Bitmap.createBitmap(result.cols(), result.rows(),Bitmap.Config.ARGB_8888);
         Utils.matToBitmap(result, bm);
         tessBaseAPI.init(context.getFilesDir() + "/","eng");
+        tessBaseAPI.setVariable(TessBaseAPI.VAR_CHAR_WHITELIST, "0123456789");
         tessBaseAPI.setImage(bm);
         String retStr = tessBaseAPI.getUTF8Text();
         tessBaseAPI.end();
@@ -292,5 +308,27 @@ public class SudokuSolver {
     }
 
 
+    public void checkParamFile(){
+        try{
+
+            File dir = new File(context.getFilesDir(), DATA_PATH);
+            if(!dir.exists()){
+                dir.mkdirs();
+            }
+            //if(!(new File(context.getFilesDir() + "/" + DATA_PATH, "blod.xml")).exists()){
+                InputStream is = context.getAssets().open("blod.xml");
+                OutputStream os = new FileOutputStream(context.getFilesDir() + "/" + DATA_PATH + "/" + "blod.xml");
+                byte [] buff = new byte[1024];
+                int len;
+                while((len = is.read(buff))>0){
+                    os.write(buff,0,len);
+                }
+                is.close();
+                os.close();
+            //d}
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
 }

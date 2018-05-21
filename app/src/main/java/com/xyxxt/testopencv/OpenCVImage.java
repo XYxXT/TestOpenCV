@@ -29,6 +29,7 @@ import org.opencv.core.Scalar;
 import org.opencv.features2d.FeatureDetector;
 import org.opencv.imgproc.Imgproc;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.util.List;
@@ -136,6 +137,8 @@ public class OpenCVImage extends AppCompatActivity {
         }
     }
 
+
+
     protected void onActivityResult(int reqCode, int resultCode, Intent data) {
         super.onActivityResult(reqCode, resultCode, data);
         if (resultCode == RESULT_OK) {
@@ -192,9 +195,12 @@ public class OpenCVImage extends AppCompatActivity {
     }
 
     private void detectNumber(){
-        sudokuSplits = sudokuSolver.splitSudoku(sudokuSolver.rotateImage(sudokuSolver.passToPerspective(sudokuSolver.getImgOriginal(), sudokuSolver.bigContour, 1650, 750), angle));
+       // sudokuSplits = sudokuSolver.splitSudoku(sudokuSolver.rotateImage(sudokuSolver.passToPerspective(sudokuSolver.getImgOriginal(), sudokuSolver.bigContour, 1650, 750), angle));
+
+        sudokuSplits = sudokuSolver.splitSudoku(sudokuSolver.getImgOriginal());
         iteradorI = 0; iteradorJ = 0;
-        showImageFromCamera(sudokuSplits[iteradorI][iteradorJ]);
+
+        detectNumberOfImage();
     }
 
     public void onclick_btnPrevious(View view){
@@ -206,7 +212,6 @@ public class OpenCVImage extends AppCompatActivity {
                 iteradorI --; iteradorJ = 8;
             }
         }
-        showImageFromCamera(sudokuSplits[iteradorI][iteradorJ]);
         detectNumberOfImage();
     }
 
@@ -219,14 +224,17 @@ public class OpenCVImage extends AppCompatActivity {
                 iteradorI ++; iteradorJ = 0;
             }
         }
-        showImageFromCamera(sudokuSplits[iteradorI][iteradorJ]);
         detectNumberOfImage();
     }
 
 
     private void detectNumberOfImage(){
         try{
-            txtNumber.setText(String.valueOf(sudokuSolver.getTextWithTesseract(sudokuSolver.rotateImage((sudokuSplits[iteradorI][iteradorJ]), angle))));
+
+            Mat image = sudokuSplits[iteradorI][iteradorJ].clone();
+            image = sudokuSolver.getImageThreshold_2(image);
+            showImageFromCamera(image);
+            txtNumber.setText(String.valueOf(sudokuSolver.getTextWithTesseract(sudokuSolver.rotateImage((image), angle))));
             //txtNumber.setText(String.valueOf(sudokuSolver.getTextWithTesseract(sudokuSolver.getImageThreshold())));
         }catch (Exception e){
             e.printStackTrace();
@@ -234,11 +242,13 @@ public class OpenCVImage extends AppCompatActivity {
         }
     }
 
+
     private void detectBorder() {
 
         Mat img = sudokuSolver.getImageThreshold(sudokuSolver.getImgOriginal());
         FeatureDetector featureDetector = FeatureDetector.create(FeatureDetector.SIMPLEBLOB);
-
+        sudokuSolver.checkParamFile();
+        featureDetector.read(new File(getFilesDir() + "/tessdata/blod.xml").getPath());
 
 
         MatOfKeyPoint keyPoints = new MatOfKeyPoint();
